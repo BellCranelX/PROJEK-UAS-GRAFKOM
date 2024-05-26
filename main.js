@@ -1,15 +1,13 @@
 import * as THREE from 'three';
-import { Player, PlayerController, ThirdPersonCamera } from './player.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import {  Player, Environment, PlayerController, ThirdPersonCamera } from './player.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-
-let mixer;
 
 class Main {
     static init() {
         var canvasReference = document.getElementById('canvas');
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const environment = new Environment(this.scene);
         this.renderer = new THREE.WebGLRenderer({
             antialias: true,
             canvas: canvasReference
@@ -19,14 +17,14 @@ class Main {
         this.renderer.shadowMap.enabled = true;
 
         // Plane
-        var Plane = new THREE.Mesh(
-            new THREE.PlaneGeometry(40, 40),
+        var plane = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
             new THREE.MeshPhongMaterial({ color: 0x555555, side: THREE.DoubleSide })
         );
-        this.scene.add(Plane);
-        Plane.rotation.x = -Math.PI / 2;
-        Plane.receiveShadow = true;
-        Plane.castShadow = true;
+        this.scene.add(plane);
+        plane.rotation.x = -Math.PI / 2;
+        plane.receiveShadow = true;
+        plane.castShadow = true;
 
         // Directional Light
         var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -37,32 +35,20 @@ class Main {
         // Create player controller
         this.playerController = new PlayerController();
 
-        // Load FBX Model
-        const loader = new FBXLoader();
-        loader.load('Remy.fbx', (object) => {
-            mixer = new THREE.AnimationMixer(object);
+        
 
-            const action = mixer.clipAction(object.animations[0]);
-            action.play();
+        // Create player with the loaded FBX model
+        this.player = new Player(
+            new ThirdPersonCamera(this.camera, new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0)),
+            this.playerController, // Pass player controller to Player
+            this.scene,
+            10
+        );
 
-            object.traverse((child) => {
-                if (child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                }
-            });
-            object.scale.set(0.01, 0.01, 0.01);
+        
 
-            this.scene.add(object);
-            this.player = new Player(
-                new ThirdPersonCamera(this.camera, new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0)),
-                this.playerController, // Pass player controller to Player
-                this.scene,
-                10
-            );
-        }, undefined, (error) => {
-            console.error(error);
-        });
+        // Load the FBX model
+        environment.loadModel('resource/haunted_house.fbx', new THREE.Vector3(5, 1.45, 0), 0.01);
 
         var thirdPersonCamera = new ThirdPersonCamera(this.camera, new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0));
         thirdPersonCamera.setUp(new THREE.Vector3(0, 0, 0));
@@ -74,6 +60,9 @@ class Main {
     }
 
     static render(dt) {
+        if (this.mixer) {
+            this.mixer.update(dt); // Update animations if mixer is defined
+        }
         if (this.player) {
             this.player.update(dt); // Update player based on controller input
         }
@@ -84,33 +73,7 @@ class Main {
         requestAnimationFrame(this.animate);
         this.render(this.clock.getDelta());
     }
-
-    static unloadModel() {
-        if (this.loadedObject) {
-            // Traverse and dispose of all geometries and materials
-            this.loadedObject.traverse((child) => {
-                if (child.isMesh) {
-                    child.geometry.dispose();
-
-                    if (Array.isArray(child.material)) {
-                        child.material.forEach((material) => material.dispose());
-                    } else {
-                        child.material.dispose();
-                    }
-                }
-            });
-
-            // Remove the object from the scene
-            this.scene.remove(this.loadedObject);
-            this.loadedObject = null;
-        }
-    }
 }
 
 Main.init();
-
-// Call this function to unload the model
-function unloadModel() {
-    Main.unloadModel();
-}
 
