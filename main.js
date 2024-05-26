@@ -37,13 +37,6 @@ class Main {
         // Create player controller
         this.playerController = new PlayerController();
 
-        this.player = new Player(
-            new ThirdPersonCamera(this.camera, new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0)),
-            this.playerController, // Pass player controller to Player
-            this.scene,
-            10
-        );
-
         // Load FBX Model
         const loader = new FBXLoader();
         loader.load('Remy.fbx', (object) => {
@@ -58,9 +51,15 @@ class Main {
                     child.receiveShadow = true;
                 }
             });
+            object.scale.set(0.01, 0.01, 0.01);
 
             this.scene.add(object);
-            this.loadedObject = object; // Store the reference to the loaded object
+            this.player = new Player(
+                new ThirdPersonCamera(this.camera, new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0)),
+                this.playerController, // Pass player controller to Player
+                this.scene,
+                10
+            );
         }, undefined, (error) => {
             console.error(error);
         });
@@ -75,10 +74,9 @@ class Main {
     }
 
     static render(dt) {
-        if (mixer) {
-            mixer.update(dt);
+        if (this.player) {
+            this.player.update(dt); // Update player based on controller input
         }
-        this.player.update(dt); // Update player based on controller input
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -116,5 +114,3 @@ function unloadModel() {
     Main.unloadModel();
 }
 
-// Example of triggering unloadModel after 10 seconds
-setTimeout(unloadModel, 10000);
