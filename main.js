@@ -1,79 +1,61 @@
 import * as THREE from 'three';
-import {  Player, Environment, PlayerController, ThirdPersonCamera } from './player.js';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import {Player, PlayerController, ThirdPersonCamera} from './player.js';
+import {Environment} from './environment.js';
 
 class Main {
     static init() {
         var canvasReference = document.getElementById('canvas');
         this.scene = new THREE.Scene();
+        const environment = new Environment(this.scene); // Move this line after initializing this.scene
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const environment = new Environment(this.scene);
         this.renderer = new THREE.WebGLRenderer({
             antialias: true,
             canvas: canvasReference
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setClearColor(0x000000);
+        this.renderer.setClearColor(0x000000); // Change clearColor to setClearColor
         this.renderer.shadowMap.enabled = true;
 
-        // Plane
-        var plane = new THREE.Mesh(
-            new THREE.PlaneGeometry(100, 100),
-            new THREE.MeshPhongMaterial({ color: 0x555555, side: THREE.DoubleSide })
+        //Plane
+        var Plane = new THREE.Mesh(
+            new THREE.PlaneGeometry(40, 40),
+            new THREE.MeshPhongMaterial({ color: 0x555555, side: THREE.DoubleSide }) // Change doubleSide to DoubleSide
         );
-        this.scene.add(plane);
-        plane.rotation.x = -Math.PI / 2;
-        plane.receiveShadow = true;
-        plane.castShadow = true;
+        this.scene.add(Plane);
+        Plane.rotation.x = -Math.PI / 2;
+        Plane.receiveShadow = true;
+        Plane.castShadow = true;
 
-        // Directional Light
+        //Directional Light
         var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(3, 10, 10);
         directionalLight.castShadow = true;
         this.scene.add(directionalLight);
 
-        // Create player controller
-        this.playerController = new PlayerController();
-
-        
-
-        // Create player with the loaded FBX model
         this.player = new Player(
             new ThirdPersonCamera(this.camera, new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0)),
-            this.playerController, // Pass player controller to Player
+            new PlayerController(),
             this.scene,
             10
         );
 
-        
-
-        // Load the FBX model
-        environment.loadModel('resource/haunted_house.fbx', new THREE.Vector3(5, 1.45, 0), 0.01);
-
-        var thirdPersonCamera = new ThirdPersonCamera(this.camera, new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0));
-        thirdPersonCamera.setUp(new THREE.Vector3(0, 0, 0));
-
-        // Initialize clock
-        this.clock = new THREE.Clock();
-
-        this.animate();
+        var controller = new PlayerController();
+        environment.loadModel('Environment/haunted_house/haunted_house.fbx', new THREE.Vector3(5, 1.45, 0), 0.02);
     }
 
     static render(dt) {
-        if (this.mixer) {
-            this.mixer.update(dt); // Update animations if mixer is defined
-        }
-        if (this.player) {
-            this.player.update(dt); // Update player based on controller input
-        }
+        this.player.update(dt);
         this.renderer.render(this.scene, this.camera);
-    }
-
-    static animate = () => {
-        requestAnimationFrame(this.animate);
-        this.render(this.clock.getDelta());
     }
 }
 
+var clock = new THREE.Clock();
 Main.init();
 
+function animate() {
+    Main.render(clock.getDelta());
+    requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
+//         }
