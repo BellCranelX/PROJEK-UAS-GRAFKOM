@@ -1,13 +1,18 @@
 import * as THREE from 'three';
 import {Player, PlayerController, ThirdPersonCamera} from './player.js';
 import {Environment} from './environment.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 class Main {
     static init() {
         var canvasReference = document.getElementById('canvas');
         this.scene = new THREE.Scene();
         const environment = new Environment(this.scene); // Move this line after initializing this.scene
+        
+        //Camera
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    
+        
         this.renderer = new THREE.WebGLRenderer({
             antialias: true,
             canvas: canvasReference
@@ -40,9 +45,10 @@ class Main {
         );
 
         var controller = new PlayerController();
-        environment.loadModel('Environment/haunted_house/haunted_house.fbx', new THREE.Vector3(5, 1.45, 0), 0.02);
+        // environment.loadModel('Environment/haunted_house/haunted_house.fbx', new THREE.Vector3(5, 1.45, 0), 0.02);
     }
 
+    
     static render(dt) {
         this.player.update(dt);
         this.renderer.render(this.scene, this.camera);
