@@ -1,90 +1,107 @@
 import * as THREE from 'three';
+import { Player, PlayerController, ThirdPersonCamera, FreeRoamCamera } from './player.js';
+import { Environment } from './environment.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/controls/OrbitControls.js';
+ // Ubah path impor OrbitControls
 
-export class FreeRoamCamera {
-  constructor(camera, canvas) {
-      this.camera = camera;
-      this.canvas = canvas;
+class Main {
+    static init() {
+        var canvasReference = document.getElementById('canvas');
+        this.scene = new THREE.Scene();
+        const environment = new Environment(this.scene); // Pindahkan baris ini setelah menginisialisasi this.scene
 
-      this.moveSpeed = 0.1;
-      this.rotationSpeed = 0.002;
+        // Kamera
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-      this.keys = {};
-      this.mouseDown = false;
-      this.deltaMousePos = new THREE.Vector2();
+        // Tambahkan OrbitControls
+        this.controls = new OrbitControls(this.camera, canvasReference);
+        this.controls.target.set(0, 0, 0); // Atur titik target agar kamera menghadap ke pusat scene
+        this.controls.update(); // Update kontrol
 
-      this.initEventListeners();
-  }
+        this.renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            canvas: canvasReference
+        });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setClearColor(0x000000);
+        this.renderer.shadowMap.enabled = true;
 
-  initEventListeners() {
-      document.addEventListener('keydown', (e) => this.onKeyDown(e), false);
-      document.addEventListener('keyup', (e) => this.onKeyUp(e), false);
-      this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
-      this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e), false);
-      this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
-  }
+        // Bidang
+        var plane = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
+            new THREE.MeshPhongMaterial({ color: 0x555555, side: THREE.DoubleSide })
+        );
+        this.scene.add(plane);
+        plane.rotation.x = -Math.PI / 2;
+        plane.receiveShadow = true;
+        plane.castShadow = true;
 
-  onKeyDown(event) {
-      this.keys[event.code] = true;
-  }
+        // Cahaya Direksional
+        var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(3, 10, 10);
+        directionalLight.castShadow = true;
+        this.scene.add(directionalLight);
 
-  onKeyUp(event) {
-      this.keys[event.code] = false;
-  }
+        this.player = new Player(
+            new ThirdPersonCamera(this.camera, new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0)),
+            new PlayerController(),
+            this.scene,
+            10
+        );
 
-  onMouseDown(event) {
-      this.mouseDown = true;
-      // Lock the pointer to the canvas
-      this.canvas.requestPointerLock();
-  }
+        var controller = new PlayerController();
+        environment.loadModel('Environment/haunted_house/haunted_house.fbx', new THREE.Vector3(5, 1.45, 0), 0.02);
 
-  onMouseUp(event) {
-      this.mouseDown = false;
-      // Exit pointer lock when the mouse is released
-      document.exitPointerLock();
-  }
+        this.isFreeRoam = false;
+        // Hapus event listener untuk 'keydown'
 
-  onMouseMove(event) {
-      if (this.mouseDown) {
-          this.deltaMousePos.x += event.movementX * this.rotationSpeed;
-          this.deltaMousePos.y += event.movementY * this.rotationSpeed;
-      }
-  }
+        // Tambahkan event listener untuk mendeteksi scroll mouse
+        window.addEventListener('wheel', (event) => this.onMouseScroll(event), false);
+    }
 
-  update() {
-      if (this.mouseDown) {
-          this.camera.rotation.y -= this.deltaMousePos.x;
-          this.camera.rotation.x -= this.deltaMousePos.y;
-          this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
-          this.deltaMousePos.set(0, 0);
-      }
+    static onMouseScroll(event) {
+        // Mengatur perubahan sudut pandang kamera berdasarkan scroll mouse
+        const delta = event.deltaY * 0.01; // Nilai delta dapat disesuaikan sesuai kebutuhan
+        this.camera.position.z += delta;
 
-      let direction = new THREE.Vector3();
-      let forward = new THREE.Vector3();
-      let right = new THREE.Vector3();
+        // Memastikan kamera tidak terlalu dekat atau terlalu jauh dari karakter
+        const minDistance = 5;
+        const maxDistance = 20;
+        this.camera.position.z = THREE.MathUtils.clamp(this.camera.position.z, minDistance, maxDistance);
 
-      this.camera.getWorldDirection(forward);
-      forward.y = 0;
-      forward.normalize();
+        // Mengatur arah pandang karakter untuk selalu menghadap ke arah kamera
+        this.player.character.lookAt(this.camera.position);
+    }
 
-      right.crossVectors(this.camera.up, forward).normalize();
+    static toggleCamera() {
+        this.isFreeRoam = !this.isFreeRoam;
+        if (this.isFreeRoam) {
+            // Switch to free roam camera
+            this.camera.position.set(0, 5, 10);
+            this.camera.lookAt(0, 0, 0);
+        } else {
+            // Switch back to third-person camera
+            this.player.camera.setup(new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0));
 
-      if (this.keys['KeyW']) {
-          direction.add(forward);
-      }
-      if (this.keys['KeyS']) {
-          direction.sub(forward);
-      }
-      if (this.keys['KeyA']) {
-          direction.sub(right);
-      }
-      if (this.keys['KeyD']) {
-          direction.add(right);
-      }
+            // Set character rotation to match camera rotation
+            this.player.character.rotation.y = this.camera.rotation.y;
+        }
+    }
 
-      if (direction.length() > 0) {
-          direction.normalize();
-          this.camera.position.addScaledVector(direction, this.moveSpeed);
-      }
-  }
+    static render(dt) {
+        if (!this.isFreeRoam) {
+            this.player.update(dt);
+        }
+        this.renderer.render(this.scene, this.camera);
+    }
 }
 
+var clock = new THREE.Clock();
+Main.init();
+
+function animate() {
+    Main.render(clock.getDelta());
+    requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);

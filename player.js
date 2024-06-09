@@ -11,9 +11,14 @@ export class Player {
         this.rotationVector = new THREE.Vector3(0, 0, 0);
         this.animations = {};
 
-        this.camera.setup(new THREE.Vector3(0, 0, 0), this.rotationVector);
+        this.camera.setup(new THREE.Vector3(0, 0, 0), this.rotationVector); 
 
         this.loadModel();
+    }
+
+    setOrientation(direction) {
+        // Atur orientasi karakter ke arah direction
+        this.character.rotation.y = Math.atan2(-direction.x, -direction.z);
     }
 
     loadModel() {
