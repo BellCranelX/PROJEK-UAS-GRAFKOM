@@ -23,7 +23,7 @@ class Main {
 
         //Plane
         var Plane = new THREE.Mesh(
-            new THREE.PlaneGeometry(40, 40),
+            new THREE.PlaneGeometry(100, 100),
             new THREE.MeshPhongMaterial({ color: 0x555555, side: THREE.DoubleSide }) // Change doubleSide to DoubleSide
         );
         this.scene.add(Plane);
@@ -46,9 +46,8 @@ class Main {
         
         this.freeRoamCamera = new FreeRoamCamera(this.camera, canvasReference);
 
-
         var controller = new PlayerController();
-        environment.loadModel('Environment/haunted_house/haunted_house.fbx', new THREE.Vector3(5, 1.45, 0), 0.02);
+        environment.loadModel('Environment/environment.fbm/environment.fbx', new THREE.Vector3(5, 1.45, 0), 0.02);
 
         this.isFreeRoam = false;
         this.setupEventListeners();
@@ -67,21 +66,46 @@ class Main {
     static toggleCamera() {
         this.isFreeRoam = !this.isFreeRoam;
         if (this.isFreeRoam) {
-            // Switch to free roam camera
-            this.camera.position.set(0, 5, 10); // Adjust position as needed
-            this.camera.lookAt(0, 0, 0); // Look at the center of the scene
+            // Simpan posisi karakter saat ini
+            this.previousPlayerPosition = this.player.mesh.position.clone();
+    
+            // Setel kamera untuk memulai dari sekitar karakter
+            const distance = 10; // Jarak dari karakter
+            const angle = Math.PI / 4; // Sudut rotasi
+    
+            const offsetX = distance * Math.cos(angle);
+            const offsetY = 5;
+            const offsetZ = distance * Math.sin(angle);
+    
+            this.camera.position.copy(this.previousPlayerPosition).add(new THREE.Vector3(offsetX, offsetY, offsetZ));
+            this.camera.lookAt(this.previousPlayerPosition); // Look at the character
+    
+            // Hentikan pembaruan pemain saat ini
+            this.player.stopUpdate();
         } else {
-            // Switch back to third-person camera
+            // Hidupkan pembaruan pemain kembali
+            this.player.resumeUpdate();
+    
+            // Kembalikan kamera ke posisi dan orientasi awalnya
             this.player.camera.setup(new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0));
+    
+            // Atur ulang orientasi kamera
+            this.camera.lookAt(this.player.mesh.position);
         }
     }
 
     static render(dt) {
         if (!this.isFreeRoam) {
             this.player.update(dt);
-        } else {
-            this.freeRoamCamera.update();
         }
+
+        // Jika mode free roam aktif dan pemain telah bergerak, update posisi kamera
+        if (this.isFreeRoam && this.previousPlayerPosition && !this.player.mesh.position.equals(this.previousPlayerPosition)) {
+            this.camera.position.copy(this.player.mesh.position).add(new THREE.Vector3(0, 5, 10)); // Adjust position as needed
+            this.camera.lookAt(this.player.mesh.position); // Look at the character
+            this.previousPlayerPosition.copy(this.player.mesh.position); // Update previous player position
+        }
+
         this.renderer.render(this.scene, this.camera);
     }
 }
@@ -91,6 +115,8 @@ Main.init();
 
 function animate() {
     Main.render(clock.getDelta());
+    // Panggil fungsi update dari kamera free roam
+    Main.freeRoamCamera.update();
     requestAnimationFrame(animate);
 }
 
