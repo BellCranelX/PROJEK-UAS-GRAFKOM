@@ -6,7 +6,7 @@ export class FreeRoamCamera {
       this.canvas = canvas;
 
       this.moveSpeed = 0.1;
-      this.rotationSpeed = 0.005;
+      this.rotationSpeed = 0.002;
 
       this.keys = {};
       this.mouseDown = false;
@@ -45,15 +45,15 @@ export class FreeRoamCamera {
 
   onMouseMove(event) {
       if (this.mouseDown) {
-          this.deltaMousePos.x -= event.movementX * this.rotationSpeed;
-          this.deltaMousePos.y -= event.movementY * this.rotationSpeed;
+          this.deltaMousePos.x += event.movementX * this.rotationSpeed;
+          this.deltaMousePos.y += event.movementY * this.rotationSpeed;
       }
   }
 
   update() {
       if (this.mouseDown) {
-          this.camera.rotation.y += this.deltaMousePos.x;
-          this.camera.rotation.x += this.deltaMousePos.y;
+          this.camera.rotation.y -= this.deltaMousePos.x;
+          this.camera.rotation.x -= this.deltaMousePos.y;
           this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
           this.deltaMousePos.set(0, 0);
       }
@@ -74,10 +74,10 @@ export class FreeRoamCamera {
       if (this.keys['KeyS']) {
           direction.sub(forward);
       }
-      if (this.keys['KeyD']) {
+      if (this.keys['KeyA']) {
           direction.sub(right);
       }
-      if (this.keys['KeyA']) {
+      if (this.keys['KeyD']) {
           direction.add(right);
       }
 
@@ -87,3 +87,4 @@ export class FreeRoamCamera {
       }
   }
 }
+

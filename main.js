@@ -1,63 +1,87 @@
 import * as THREE from 'three';
-import { Player, PlayerController, ThirdPersonCamera } from './player.js';
-import { Environment } from './environment.js';
-import { FreeRoamCamera } from './camera.js';
+import {Player, PlayerController, ThirdPersonCamera, FreeRoamCamera} from './player.js';
+import {Environment} from './environment.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 class Main {
     static init() {
         var canvasReference = document.getElementById('canvas');
         this.scene = new THREE.Scene();
-        const environment = new Environment(this.scene);
-
-        // Camera
+        const environment = new Environment(this.scene); // Move this line after initializing this.scene
+        
+        //Camera
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.freeRoamCamera = new FreeRoamCamera(this.camera, canvasReference);
-
+    
+        
         this.renderer = new THREE.WebGLRenderer({
             antialias: true,
             canvas: canvasReference
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setClearColor(0x000000);
+        this.renderer.setClearColor(0x000000); // Change clearColor to setClearColor
         this.renderer.shadowMap.enabled = true;
 
-        // Plane
+        //Plane
         var Plane = new THREE.Mesh(
-            new THREE.PlaneGeometry(100, 100),
-            new THREE.MeshPhongMaterial({ color: 0x555555, side: THREE.DoubleSide })
+            new THREE.PlaneGeometry(40, 40),
+            new THREE.MeshPhongMaterial({ color: 0x555555, side: THREE.DoubleSide }) // Change doubleSide to DoubleSide
         );
         this.scene.add(Plane);
         Plane.rotation.x = -Math.PI / 2;
         Plane.receiveShadow = true;
         Plane.castShadow = true;
 
-        // Directional Light
+        //Directional Light
         var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(3, 10, 10);
         directionalLight.castShadow = true;
         this.scene.add(directionalLight);
 
-        this.controller = new PlayerController();
-        this.thirdPersonCamera = new ThirdPersonCamera(this.camera, new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0));
-        this.player = new Player(this.thirdPersonCamera, this.controller, this.scene, 10);
+        this.player = new Player(
+            new ThirdPersonCamera(this.camera, new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0)),
+            new PlayerController(),
+            this.scene,
+            10
+        );
+        
+        this.freeRoamCamera = new FreeRoamCamera(this.camera, canvasReference);
 
+
+        var controller = new PlayerController();
         environment.loadModel('Environment/haunted_house/haunted_house.fbx', new THREE.Vector3(5, 1.45, 0), 0.02);
 
         this.isFreeRoam = false;
+        this.setupEventListeners();
+    }
+
+    static setupEventListeners() {
+        document.addEventListener('keydown', (e) => this.onKeyDown(e), false);
+    }
+
+    static onKeyDown(event) {
+        if (event.key === 't' || event.key === 'T') {
+            this.toggleCamera();
+        }
+    }
+
+    static toggleCamera() {
+        this.isFreeRoam = !this.isFreeRoam;
+        if (this.isFreeRoam) {
+            // Switch to free roam camera
+            this.camera.position.set(0, 5, 10); // Adjust position as needed
+            this.camera.lookAt(0, 0, 0); // Look at the center of the scene
+        } else {
+            // Switch back to third-person camera
+            this.player.camera.setup(new THREE.Vector3(-5, 5, 0), new THREE.Vector3(0, 0, 0));
+        }
     }
 
     static render(dt) {
-        if (this.controller.switchCamera) {
-            this.isFreeRoam = !this.isFreeRoam;
-            this.controller.switchCamera = false;
-        }
-
-        if (this.isFreeRoam) {
-            this.freeRoamCamera.update();
-        } else {
+        if (!this.isFreeRoam) {
             this.player.update(dt);
+        } else {
+            this.freeRoamCamera.update();
         }
-
         this.renderer.render(this.scene, this.camera);
     }
 }

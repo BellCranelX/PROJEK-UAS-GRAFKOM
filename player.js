@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
 export class Player {
@@ -50,42 +50,24 @@ export class Player {
     update(dt) {
         if (this.mesh && this.animations) {
             var direction = new THREE.Vector3(0, 0, 0);
-            var forward = new THREE.Vector3();
-            var right = new THREE.Vector3();
-
-            this.camera.camera.getWorldDirection(forward);
-            forward.y = 0;
-            forward.normalize();
-
-            right.crossVectors(this.camera.camera.up, forward).normalize();
 
             if (this.controller.keys['forward']) {
-                direction.add(forward);
+                direction.x = 1;
+                this.mesh.rotation.y = Math.PI / 2;
             }
             if (this.controller.keys['backward']) {
-                direction.add(forward.clone().negate());
+                direction.x = -1;
+                this.mesh.rotation.y = -Math.PI / 2;
             }
             if (this.controller.keys['left']) {
-                direction.add(right.clone().negate());
+                direction.z = -1;
+                this.mesh.rotation.y = Math.PI;
             }
             if (this.controller.keys['right']) {
-                direction.add(right);
+                direction.z = 1;
+                this.mesh.rotation.y = 0;
             }
 
-            // Normalize the direction vector for consistent speed in all directions
-            if (direction.length() > 0) {
-                direction.normalize();
-            }
-
-            // Apply movement based on the calculated direction
-            this.mesh.position.addScaledVector(direction, dt * this.speed);
-
-            // Determine the rotation of the character based on the movement direction
-            if (direction.length() > 0) {
-                this.mesh.rotation.y = Math.atan2(direction.x, direction.z);
-            }
-
-            // Play the appropriate animation
             if (direction.length() == 0) {
                 if (this.animations['idle']) {
                     if (this.state != 'idle') {
@@ -106,14 +88,51 @@ export class Player {
                 }
             }
 
+            // Check for diagonal movement (W + D keys pressed)
+            if (this.controller.keys['forward'] && this.controller.keys['right']) {
+                direction.x = Math.sqrt(2) / 2; // Adjust speed for diagonal movement
+                direction.z = Math.sqrt(2) / 2; // Adjust speed for diagonal movement
+                this.mesh.rotation.y = Math.PI / 4; // Adjust rotation for diagonal movement
+            }
+
+            // Check for diagonal movement (W + A keys pressed)
+            if (this.controller.keys['backward'] && this.controller.keys['right']) {
+                direction.x = -Math.sqrt(2) / 2; // Adjust speed for diagonal movement
+                direction.z = Math.sqrt(2) / 2; // Adjust speed for diagonal movement
+                this.mesh.rotation.y = -Math.PI / 4; // Adjust rotation for diagonal movement
+            }
+
+            // Check for diagonal movement (S + D keys pressed)
+            if (this.controller.keys['forward'] && this.controller.keys['left']) {
+                direction.x = Math.sqrt(2) / 2; // Adjust speed for diagonal movement
+                direction.z = -Math.sqrt(2) / 2; // Adjust speed for diagonal movement
+                this.mesh.rotation.y = Math.PI * 3 / 4; // Adjust rotation for diagonal movement
+            }
+
+            // Check for diagonal movement (S + A keys pressed)
+            if (this.controller.keys['backward'] && this.controller.keys['left']) {
+                direction.x = -Math.sqrt(2) / 2; // Adjust speed for diagonal movement
+                direction.z = -Math.sqrt(2) / 2; // Adjust speed for diagonal movement
+                this.mesh.rotation.y = -Math.PI * 3 / 4; // Adjust rotation for diagonal movement
+            }
+
+            // Normalize the direction vector for consistent speed in all directions
+            if (direction.length() > 0) {
+                direction.normalize();
+            }
+
+            // Apply movement based on the calculated direction
+            this.mesh.position.addScaledVector(direction, dt * this.speed);
+
             // Update camera rotation
             if (this.controller.mouseDown) {
                 this.camera.updateRotation(this.controller.deltaMousePos);
-                this.controller.deltaMousePos.set(0, 0); // Reset deltaMousePos after applying rotation
             }
 
             // Update the camera position
             this.camera.update(this.mesh.position);
+
+            // Rest of your update logic...
         }
     }
 }
@@ -125,27 +144,22 @@ export class PlayerController {
             "backward": false,
             "left": false,
             "right": false
-        };
+        }
         this.mousePos = new THREE.Vector2();
         this.mouseDown = false;
         this.deltaMousePos = new THREE.Vector2();
-        this.switchCamera = false;
-        
         document.addEventListener('keydown', (e) => this.onKeyDown(e), false);
         document.addEventListener('keyup', (e) => this.onKeyUp(e), false);
         document.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
         document.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
         document.addEventListener('mouseup', (e) => this.onMouseUp(e), false);
     }
-
     onMouseDown(event) {
         this.mouseDown = true;
     }
-
     onMouseUp(event) {
         this.mouseDown = false;
     }
-
     onMouseMove(event) {
         var currentMousePos = new THREE.Vector2(
             (event.clientX / window.innerWidth) * 2 - 1,
@@ -156,7 +170,6 @@ export class PlayerController {
         }
         this.mousePos.copy(currentMousePos);
     }
-
     onKeyDown(event) {
         switch (event.keyCode) {
             case "W".charCodeAt(0):
@@ -167,21 +180,16 @@ export class PlayerController {
             case "s".charCodeAt(0):
                 this.keys['backward'] = true;
                 break;
-            case "D".charCodeAt(0):
-            case "d".charCodeAt(0):
-                this.keys['left'] = true;
-                break;
             case "A".charCodeAt(0):
             case "a".charCodeAt(0):
-                this.keys['right'] = true;
+                this.keys['left'] = true;
                 break;
-            case "T".charCodeAt(0):
-            case "t".charCodeAt(0):
-                this.switchCamera = !this.switchCamera;
+            case "D".charCodeAt(0):
+            case "d".charCodeAt(0):
+                this.keys['right'] = true;
                 break;
         }
     }
-
     onKeyUp(event) {
         switch (event.keyCode) {
             case "W".charCodeAt(0):
@@ -192,12 +200,12 @@ export class PlayerController {
             case "s".charCodeAt(0):
                 this.keys['backward'] = false;
                 break;
-            case "D".charCodeAt(0):
-            case "d".charCodeAt(0):
-                this.keys['left'] = false;
-                break;
             case "A".charCodeAt(0):
             case "a".charCodeAt(0):
+                this.keys['left'] = false;
+                break;
+            case "D".charCodeAt(0):
+            case "d".charCodeAt(0):
                 this.keys['right'] = false;
                 break;
         }
@@ -216,23 +224,112 @@ export class ThirdPersonCamera {
         this.update(target);
     }
     updateRotation(deltaMousePos) {
-        this.rotation.x -= deltaMousePos.x * 0.005; // Adjust sensitivity as needed
-        this.rotation.y -= deltaMousePos.y * 0.005; // Adjust sensitivity as needed
+        this.rotation.x -= deltaMousePos.x * 10; // Adjust sensitivity as needed
+        this.rotation.y -= deltaMousePos.y * 10; // Adjust sensitivity as needed
         this.rotation.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.rotation.y)); // Limit vertical rotation
         console.log(`Rotation updated: ${this.rotation.x}, ${this.rotation.y}`);
     }
     update(target) {
-        var offset = new THREE.Vector3();
-        offset.copy(this.positionOffset);
-        offset.applyEuler(new THREE.Euler(this.rotation.y, this.rotation.x, 0, 'YXZ'));
-        offset.add(target);
-
-        this.camera.position.copy(offset);
-
-        var targetPosition = new THREE.Vector3();
-        targetPosition.copy(target);
-        targetPosition.add(this.targetOffset);
-
-        this.camera.lookAt(targetPosition);
+        var temp = new THREE.Vector3(0, 0, 0);
+        temp.copy(this.positionOffset);
+        temp.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotation.x); // Horizontal rotation
+        temp.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.rotation.y); // Vertical rotation
+        temp.addVectors(target, temp);
+        this.camera.position.copy(temp);
+        temp = new THREE.Vector3(0, 0, 0);
+        temp.addVectors(target, this.targetOffset);
+        this.camera.lookAt(temp);
     }
 }
+
+
+
+export class FreeRoamCamera {
+    constructor(camera, canvas) {
+        this.camera = camera;
+        this.canvas = canvas;
+  
+        this.moveSpeed = 0.1;
+        this.rotationSpeed = 0.002;
+  
+        this.keys = {};
+        this.mouseDown = false;
+        this.deltaMousePos = new THREE.Vector2();
+  
+        this.initEventListeners();
+    }
+  
+    initEventListeners() {
+        document.addEventListener('keydown', (e) => this.onKeyDown(e), false);
+        document.addEventListener('keyup', (e) => this.onKeyUp(e), false);
+        this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
+        this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e), false);
+        this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
+    }
+  
+    onKeyDown(event) {
+        this.keys[event.code] = true;
+    }
+  
+    onKeyUp(event) {
+        this.keys[event.code] = false;
+    }
+  
+    onMouseDown(event) {
+        this.mouseDown = true;
+        // Lock the pointer to the canvas
+        this.canvas.requestPointerLock();
+    }
+  
+    onMouseUp(event) {
+        this.mouseDown = false;
+        // Exit pointer lock when the mouse is released
+        document.exitPointerLock();
+    }
+  
+    onMouseMove(event) {
+        if (this.mouseDown) {
+            this.deltaMousePos.x += event.movementX * this.rotationSpeed;
+            this.deltaMousePos.y += event.movementY * this.rotationSpeed;
+        }
+    }
+  
+    update() {
+        if (this.mouseDown) {
+            this.camera.rotation.y -= this.deltaMousePos.x;
+            this.camera.rotation.x -= this.deltaMousePos.y;
+            this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
+            this.deltaMousePos.set(0, 0);
+        }
+  
+        let direction = new THREE.Vector3();
+        let forward = new THREE.Vector3();
+        let right = new THREE.Vector3();
+  
+        this.camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
+  
+        right.crossVectors(this.camera.up, forward).normalize();
+  
+        if (this.keys['KeyW']) {
+            direction.add(forward);
+        }
+        if (this.keys['KeyS']) {
+            direction.sub(forward);
+        }
+        if (this.keys['KeyD']) {
+            direction.sub(right);
+        }
+        if (this.keys['KeyA']) {
+            direction.add(right);
+        }
+  
+        if (direction.length() > 0) {
+            direction.normalize();
+            this.camera.position.addScaledVector(direction, this.moveSpeed);
+        }
+    }
+  }
+  
+  
