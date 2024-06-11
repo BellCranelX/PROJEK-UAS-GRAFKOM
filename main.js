@@ -47,7 +47,7 @@ class Main {
         this.freeRoamCamera = new FreeRoamCamera(this.camera, canvasReference);
 
         var controller = new PlayerController();
-        environment.loadModel('Environment/haunted_house/haunted_house.fbx', new THREE.Vector3(5, 1.45, 0), 0.02);
+        environment.loadModel('Environment/environment.fbm/environment.fbx', new THREE.Vector3(5, 1.45, 0), 0.02);
 
         this.isFreeRoam = false;
         this.setupEventListeners();
