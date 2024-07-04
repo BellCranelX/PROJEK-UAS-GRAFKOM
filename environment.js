@@ -1,28 +1,30 @@
 import * as THREE from 'three';
-import {FBXLoader} from 'three/addons/loaders/FBXLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export class Environment {
-    constructor(scene, physics) {
+    constructor(scene, position = { x: 0, y: 0, z: 0 }) {
         this.scene = scene;
-        this.physics = physics; // Add reference to physics world
-        this.loadedModel = null; // Track the loaded model
+        this.position = position;
+        this.loadModel();
     }
 
-    loadModel(modelPath, position, scale) {
-        const loader = new FBXLoader();
-        loader.load(modelPath, (object) => {
-            console.log('Model loaded successfully:', object);
-            object.castShadow = true;
-            object.receiveShadow = true;
-            object.position.copy(position); // Set position
-            object.scale.set(scale, scale, scale); // Set scale
-            this.scene.add(object); // Add the model to the scene
-            this.loadedModel = object; // Store the loaded model
-
-            // Create physics body for the model
-            this.createPhysicsBody(object);
-        }, undefined, (error) => {
-            console.error('Error loading model:', error);
-        });
+    loadModel() {
+        const loader = new GLTFLoader();
+        loader.setPath('./Environment/');
+        loader.load(
+            'env.gltf',
+            (gltf) => {
+                gltf.scene.traverse((child) => {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                });
+                gltf.scene.position.set(this.position.x, this.position.y, this.position.z);
+                this.scene.add(gltf.scene);
+            },
+            undefined,
+            (error) => {
+                console.error(error);
+            }
+        );
     }
 }
